@@ -52,6 +52,6 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         push: true
-        tags: ghcr.io/muchavisoy-20/miniproyecto_python:v0.1
+        tags: ghcr.io/muchavisoy-20/miniproyecto_python
 
         
