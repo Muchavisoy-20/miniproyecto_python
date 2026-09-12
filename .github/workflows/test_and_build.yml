@@ -22,6 +22,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r src/requirements.txt
 
+
+    - name: Check linting     
+      working-directory: src
+      run: |
+       ruff check  .
+
+    - name: Test with pytest
+      working-directory: src
+      run: |
+        pytest tests.py
+
+
     
     - name: Test with pytest
       working-directory: src
