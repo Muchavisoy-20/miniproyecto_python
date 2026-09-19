@@ -1,4 +1,4 @@
-# Miniproyecto Python - Diplomado Módulo 1
+# Miniproyecto Python - Diplomado
 
 Este repositorio contiene la estructura modular para el miniproyecto en Python, incluyendo pruebas unitarias, análisis de código con Ruff y soporte para contenerización con Docker.
 
