@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: miniproyecto-python
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
