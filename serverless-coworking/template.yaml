@@ -1,0 +1,188 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Coworking Serverless Architecture - Diplomado
+  Migración Event-Driven con AWS Lambda, API Gateway HTTP API, Amazon EventBridge y Amazon SQS.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Entorno de despliegue de la infraestructura
+
+Globals:
+  Function:
+    Timeout: 15
+    MemorySize: 256
+    Runtime: python3.11
+    Tracing: Active
+    Environment:
+      Variables:
+        ENV: !Ref EnvironmentName
+        LOG_LEVEL: INFO
+
+Resources:
+  # ----------------------------------------------------------------------------
+  # 1. API Gateway HTTP API (v2)
+  # ----------------------------------------------------------------------------
+  CoworkingHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub "coworking-api-${EnvironmentName}"
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - PATCH
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+
+  # ----------------------------------------------------------------------------
+  # 2. Amazon EventBridge Custom Event Bus
+  # ----------------------------------------------------------------------------
+  CoworkingEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub "coworking-events-bus-${EnvironmentName}"
+
+  # ----------------------------------------------------------------------------
+  # 3. Amazon SQS: Dead Letter Queue (DLQ) y Cola Principal de Eventos
+  # ----------------------------------------------------------------------------
+  CatalogEventsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "catalog-events-dlq-${EnvironmentName}"
+      MessageRetentionPeriod: 1209600 # 14 días
+
+  CatalogEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "catalog-events-queue-${EnvironmentName}"
+      VisibilityTimeout: 90
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt CatalogEventsDeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  # Política para permitir que EventBridge publique mensajes en la cola SQS
+  CatalogEventsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref CatalogEventsQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToSendMessages
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt CatalogEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt SpaceChangedRule.Arn
+
+  # ----------------------------------------------------------------------------
+  # 4. Regla de EventBridge: Filtra eventos 'SpaceChanged' y los envía a SQS
+  # ----------------------------------------------------------------------------
+  SpaceChangedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "coworking-space-changed-rule-${EnvironmentName}"
+      EventBusName: !Ref CoworkingEventBus
+      Description: Captura cambios en la disponibilidad de espacios del catálogo y los encola en SQS
+      EventPattern:
+        source:
+          - "coworking.catalog"
+        detail-type:
+          - "SpaceChanged"
+          - "SpaceAvailabilityChanged"
+      Targets:
+        - Arn: !GetAtt CatalogEventsQueue.Arn
+          Id: "SqsCatalogEventsTarget"
+
+  # ----------------------------------------------------------------------------
+  # 5. Lambda: Catalog Service (Productor de eventos)
+  # ----------------------------------------------------------------------------
+  CatalogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "coworking-catalog-service-${EnvironmentName}"
+      CodeUri: lambda-catalog/
+      Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          EVENT_BUS_NAME: !Ref CoworkingEventBus
+      Policies:
+        - Statement:
+            - Sid: AllowPublishToEventBridge
+              Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !GetAtt CoworkingEventBus.Arn
+      Events:
+        GetHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoworkingHttpApi
+            Path: /health
+            Method: GET
+        GetSpaces:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoworkingHttpApi
+            Path: /spaces
+            Method: GET
+        GetSpaceDetail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoworkingHttpApi
+            Path: /spaces/{id}
+            Method: GET
+        UpdateSpaceAvailability:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CoworkingHttpApi
+            Path: /spaces/{id}/availability
+            Method: PATCH
+
+  # ----------------------------------------------------------------------------
+  # 6. Lambda: Consumer Service (Consumidor SQS reactivo)
+  # ----------------------------------------------------------------------------
+  ConsumerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "coworking-consumer-service-${EnvironmentName}"
+      CodeUri: lambda-consumer/
+      Handler: handler.lambda_handler
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt CatalogEventsQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
+Outputs:
+  HttpApiUrl:
+    Description: URL pública del endpoint de API Gateway HTTP
+    Value: !Sub "https://${CoworkingHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
+  EventBusArn:
+    Description: ARN del EventBus personalizado en EventBridge
+    Value: !GetAtt CoworkingEventBus.Arn
+
+  CatalogQueueUrl:
+    Description: URL de la cola principal SQS
+    Value: !Ref CatalogEventsQueue
+
+  CatalogDlqUrl:
+    Description: URL de la cola de mensajes muertos (DLQ)
+    Value: !Ref CatalogEventsDeadLetterQueue

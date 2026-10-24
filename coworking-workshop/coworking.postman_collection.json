@@ -1,0 +1,330 @@
+{
+  "info": {
+    "_postman_id": "c1f7a28e-5b1e-4c92-b883-91db4b20a7b4",
+    "name": "Coworking Space Microservices - Diplomado",
+    "description": "Colección completa de pruebas para los microservicios catalog-service (8001) y orders-service (8002).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Catalog Service",
+      "item": [
+        {
+          "name": "Health Check (Catalog)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8001/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8001",
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Service is catalog-service', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.service).to.eql('catalog-service');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Spaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8001/spaces",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8001",
+              "path": ["spaces"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns list of spaces', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(Array.isArray(json)).to.be.true;",
+                  "    pm.expect(json.length).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Space by ID (ID: 1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8001/spaces/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8001",
+              "path": ["spaces", "1"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Contains price_per_hour contract', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('price_per_hour');",
+                  "    pm.expect(json.id).to.eql(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Space Availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"available\": true\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8001/spaces/1/availability",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8001",
+              "path": ["spaces", "1", "availability"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Orders Service",
+      "item": [
+        {
+          "name": "Health Check (Orders)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Service is orders-service', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.service).to.eql('orders-service');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Order (Success)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/orders?space_id=1&user_email=test@example.com&hours=2",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "space_id",
+                  "value": "1"
+                },
+                {
+                  "key": "user_email",
+                  "value": "test@example.com"
+                },
+                {
+                  "key": "hours",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 (Created)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Order calculated correctly', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('CONFIRMED');",
+                  "    pm.expect(json.total_price).to.eql(50.0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/orders",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/orders/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["orders", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Chaos Engineering Tests",
+      "item": [
+        {
+          "name": "Chaos: Order on Unavailable Space (400)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/orders?space_id=4&user_email=usuario@ejemplo.com&hours=3",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "space_id",
+                  "value": "4"
+                },
+                {
+                  "key": "user_email",
+                  "value": "usuario@ejemplo.com"
+                },
+                {
+                  "key": "hours",
+                  "value": "3"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chaos: Order on Non-Existent Space (404)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8002/orders?space_id=9999&user_email=usuario@ejemplo.com&hours=1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8002",
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "space_id",
+                  "value": "9999"
+                },
+                {
+                  "key": "user_email",
+                  "value": "usuario@ejemplo.com"
+                },
+                {
+                  "key": "hours",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

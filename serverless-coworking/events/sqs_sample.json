@@ -1,0 +1,20 @@
+{
+  "Records": [
+    {
+      "messageId": "msg-8f92-4d2b-bc67-0923847291a1",
+      "receiptHandle": "AQEBwJnKyrHigUMZj6r...",
+      "body": "{\"version\":\"0\",\"id\":\"7a356cf2-4bc1-49b8-a6d1-4191316b2a09\",\"detail-type\":\"SpaceChanged\",\"source\":\"coworking.catalog\",\"account\":\"123456789012\",\"time\":\"2026-10-24T18:00:00Z\",\"region\":\"us-east-1\",\"resources\":[],\"detail\":{\"space_id\":1,\"space_name\":\"Sala Creativa Alpha\",\"previous_availability\":true,\"current_availability\":false,\"price_per_hour\":25.0,\"capacity\":6,\"updated_at\":\"2026-10-24T18:00:00Z\",\"triggered_by\":\"lambda-catalog-fn\"}}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1729792800000",
+        "SenderId": "AROAIEXAMPLE:events.amazonaws.com",
+        "ApproximateFirstReceiveTimestamp": "1729792800100"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "098f6bcd4621d373cade4e832627b4f6",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:123456789012:catalog-events-queue-dev",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}
